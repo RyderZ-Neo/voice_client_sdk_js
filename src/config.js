@@ -14,7 +14,7 @@ export const DEFAULT_TRANSPORT = environment === 'local' ? 'smallwebrtc' : 'dail
 
 const botStartUrl = environment === 'local'
   ? (import.meta.env.VITE_BOT_START_URL_LOCAL || 'http://localhost:7860/start')
-  : (import.meta.env.VITE_BOT_START_URL_CLOUD || 'https://api.pipecat.daily.co/v1/public/intake-interviewer/start');
+  : (import.meta.env.VITE_BOT_START_URL_CLOUD || 'https://api.pipecat.daily.co/v1/public/{agentName}/start');
 
 const botStartPublicApiKey = import.meta.env.VITE_BOT_START_PUBLIC_API_KEY;
 
