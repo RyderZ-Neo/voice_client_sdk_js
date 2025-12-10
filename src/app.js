@@ -112,8 +112,9 @@ class VoiceChatClient {
     this.pauseBtn.addEventListener('click', () => {
       if (this.isConnected && this.client) {
         this.client.enableMic(false);
-        this.client.updateMicButton(false);
-        this.client.sendClientMessage('set-action', { action: 'pause' });
+        this.updateMicButton(false);
+        // ✅ Fixed: Pass single message object
+       this.client.sendClientMessage('set-action', { action: 'pause' });
         this.pauseBtn.disabled = true;
         this.resumeBtn.disabled = false;
         this.addEvent('pause', 'Conversation paused');
@@ -123,13 +124,14 @@ class VoiceChatClient {
     this.resumeBtn.addEventListener('click', () => {
       if (this.isConnected && this.client) {
         this.client.enableMic(true);
-        this.client.updateMicButton(true);
-        this.client.sendClientMessage('set-action', { action: 'resume' });
+        this.updateMicButton(true);
+        // ✅ Fixed: Pass single message object
+       this.client.sendClientMessage('set-action', { action: 'resume' });
         this.resumeBtn.disabled = true;
         this.pauseBtn.disabled = false;
         this.addEvent('resume', 'Conversation resumed');
       }
-    });
+});
   }
 
   showUserForm() {
