@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LwAI Intake Interview</title>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header with controls -->
+    <div class="header">
+      <div class="transport-selector">
+        <label for="transport-select">Transport:</label>
+        <select id="transport-select">
+          <option value="smallwebrtc">SmallWebRTC</option>
+          <option value="daily">Daily</option>
+        </select>
+      </div>
+      <div id="user-info-form" style="display: none; margin-bottom: 20px;">
+      <h3>Enter Your Details</h3>
+      <div style="margin-bottom: 10px;">
+        <label for="user-name">Name:</label>
+        <input type="text" id="user-name" required style="width: 100%; padding: 8px; margin-top: 5px;">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <label for="user-email">Email:</label>
+        <input type="email" id="user-email" required style="width: 100%; padding: 8px; margin-top: 5px;">
+      </div>
+      <button id="start-btn" class="control-btn" style="width: 100%;">Start Interview</button>
+    </div>
+      <div class="controls">
+        <button id="mic-btn" class="control-btn" disabled>
+          🎤 <span id="mic-status">Mic is Off</span>
+        </button>
+        <button id="pause-btn" class="control-btn" disabled>⏸️ Pause</button>
+        <button id="resume-btn" class="control-btn" disabled>▶️ Resume</button>
+        <button id="connect-btn" class="connect-btn">Connect</button>
+      </div>
+    </div>
+
+    <!-- Conversation area -->
+    <div class="conversation-panel">
+      <h3>Conversation</h3>
+      <div id="conversation-log"></div>
+    </div>
+
+    <!-- Events panel -->
+    <div class="events-panel">
+      <h3>Events</h3>
+      <div id="events-log"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/app.js"></script>
+  <link rel="stylesheet" href="/src/style.css" />
+</body>
+
+</html>
