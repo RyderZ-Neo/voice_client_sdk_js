@@ -192,7 +192,10 @@ class VoiceChatClient {
         //     this.addConversationMessage(transcription.text, 'user');
         //   });
         // }
-        
+        if(data.type === 'interview_progress') {
+          console.log(`📊 Interview progress: ${data.progress_percent}%`); 
+        }
+
         if (data.type === 'bot_transcript' && data.transcriptions) {
           data.transcriptions.forEach((transcription) => {
             this.addConversationMessage(transcription.text, 'bot');
