@@ -12,6 +12,8 @@ class VoiceChatClient {
     this.transportType = DEFAULT_TRANSPORT;
     this.isConnected = false;
     this.userInfo = null; // Store user info
+    this.streamingMessages = { user: null, bot: null };
+
 
     this.setupDOM();
     this.setupEventListeners();
@@ -171,14 +173,76 @@ class VoiceChatClient {
           onError: (error) => {
             this.addEvent('error', error.message);
           },
-          onUserTranscript: (data) => {
-            if (data.final) {
-              this.addConversationMessage(data.text, 'user');
-            }
-          },
-          // onBotTranscript: (data) => {
-          //   this.addConversationMessage(data.text, 'bot');
+          // onUserTranscript: (data) => {
+          //   if (data.final) {
+          //     this.addConversationMessage(data.text, 'user');
+          //   }
+          //     console.log(`User: ${data.text} (final: ${data.final})`);
+
           // },
+          // // onBotTranscript: (data) => {
+          // //   this.addConversationMessage(data.text, 'bot');
+          // // },
+          // onBotOutput: (data) => {
+          //   if (data.text) {
+          //     this.addConversationMessage(data.text, 'bot');
+          //   }
+          // //   console.log(`Bot output: ${data.text}`);
+           onUserTranscript: (data) => {
+              // User transcripts only have 'final' flag, no aggregated_by
+              if (!data.final) {
+                // Streaming partial transcript
+                this.updateStreamingMessage('user', data.text, false);
+              } else {
+                // Final transcript - finalize bubble
+                this.updateStreamingMessage('user', data.text, true);
+              }
+              
+              console.log(`User: ${data.text} (final: ${data.final})`);
+            },
+            onBotOutput: (data) => {
+              // Bot output has aggregated_by field
+              const isWordLevel = data.aggregated_by === 'word';
+              const isFinal = data.aggregated_by === 'sentence';
+              
+              if (isWordLevel) {
+                this.updateStreamingMessage('bot', data.text, false);
+              } else if (isFinal) {
+                this.updateStreamingMessage('bot', '', true);
+              }
+              console.log(`Bot output: ${data.text} (aggregated_by: ${data.aggregated_by}, spoken: ${data.spoken})`);
+
+            }
+              
+            // },
+            // onBotOutput: (data) => {
+            //   // Bot output has aggregated_by field
+            //   const isWordLevel = data.aggregated_by === 'word';
+            //   const isSentenceLevel = data.aggregated_by === 'sentence';
+              
+            //   if (isSentenceLevel) {
+            //     // Stream sentence-level updates
+            //     this.updateStreamingMessage('bot', data.text, false);
+            //   } else if (isWordLevel) {
+            //     // Ignore word-level updates
+            //     // Do nothing - we only want sentences
+            //   }
+              
+            //   console.log(`Bot output: ${data.text} (aggregated_by: ${data.aggregated_by})`);
+            // },
+            // onBotOutput: (data) => {
+            //   // Bot output has aggregated_by field
+            //   const isWordLevel = data.aggregated_by === 'word';
+            //   const isFinal = data.aggregated_by === 'sentence';
+              
+            //   if (isFinal) {
+            //     this.updateStreamingMessage('bot', data.text, false);
+            //   } else if (isWordLevel) {
+            //     this.updateStreamingMessage('bot', '', true);
+            //   }
+              
+            //   console.log(`Bot output: ${data.text} (aggregated_by: ${data.aggregated_by}, final: ${isFinal})`);
+            // },
         },
       });
 
@@ -196,11 +260,11 @@ class VoiceChatClient {
           console.log(`📊 Interview progress: ${data.progress_percent}%`); 
         }
 
-        if (data.type === 'bot_transcript' && data.transcriptions) {
-          data.transcriptions.forEach((transcription) => {
-            this.addConversationMessage(transcription.text, 'bot');
-          });          
-        }
+        // if (data.type === 'bot_transcript' && data.transcriptions) {
+        //   data.transcriptions.forEach((transcription) => {
+        //     this.addConversationMessage(transcription.text, 'bot');
+        //   });          
+        // }
         // ✅ Handle interview completion
         if (data.type === 'interview_complete') {
           this.addEvent('interview-complete', data.message || 'Interview completed');
@@ -289,6 +353,99 @@ class VoiceChatClient {
   updateMicButton(enabled) {
     this.micStatus.textContent = enabled ? 'Mic is On' : 'Mic is Off';
     this.micBtn.style.backgroundColor = enabled ? '#10b981' : '#1f2937';
+  }
+  animateText(textDiv, newText, currentText) {
+    return new Promise((resolve) => {
+      const words = newText.split(' ');
+      let index = 0;
+      let accumulated = currentText ? currentText + ' ' : '';
+
+      const animateWord = () => {
+        if (index < words.length) {
+          accumulated += (index > 0 ? ' ' : '') + words[index];
+          textDiv.textContent = accumulated;
+          index++;
+          this.animationQueue = setTimeout(animateWord, 50); // Adjust speed (ms per word)
+        } else {
+          resolve(accumulated);
+        }
+      };
+
+      animateWord();
+    });
+  }
+  updateStreamingMessage(role, text, isFinal = false) {
+    let stream = this.streamingMessages[role];
+
+    // For bot: finalize immediately when isFinal is true
+    if (role === 'bot' && isFinal) {
+      if (stream) {
+        if (this.animationQueue) {
+          clearTimeout(this.animationQueue);
+          this.animationQueue = null;
+        }
+        stream.messageDiv.classList.remove('streaming');
+        this.streamingMessages[role] = null; // ✅ Reset the stream
+      }
+      this.conversationLog.scrollTop = this.conversationLog.scrollHeight;
+      return;
+    }
+
+    // Skip if no text and not final
+    if (!text && !isFinal) return;
+
+    // For user: simply update and finalize when final
+    if (role === 'user') {
+      if (!stream) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `conversation-message ${role} streaming`;
+        const roleSpan = document.createElement('div');
+        roleSpan.className = 'role';
+        roleSpan.textContent = 'You';
+        const textDiv = document.createElement('div');
+        textDiv.className = 'text';
+        messageDiv.appendChild(roleSpan);
+        messageDiv.appendChild(textDiv);
+        this.conversationLog.appendChild(messageDiv);
+        stream = { messageDiv, textDiv };
+        this.streamingMessages[role] = stream;
+      }
+
+      // Just replace the text with the latest version
+      stream.textDiv.textContent = text;
+
+      // If final, remove streaming class and reset
+      if (isFinal) {
+        stream.messageDiv.classList.remove('streaming');
+        this.streamingMessages[role] = null;
+      }
+
+      this.conversationLog.scrollTop = this.conversationLog.scrollHeight;
+      return;
+    }
+
+    // Bot message handling
+    if (!stream) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `conversation-message ${role} streaming`;
+      const roleSpan = document.createElement('div');
+      roleSpan.className = 'role';
+      roleSpan.textContent = 'Bot';
+      const textDiv = document.createElement('div');
+      textDiv.className = 'text';
+      messageDiv.appendChild(roleSpan);
+      messageDiv.appendChild(textDiv);
+      this.conversationLog.appendChild(messageDiv);
+      stream = { messageDiv, textDiv, accumulatedText: '' };
+      this.streamingMessages[role] = stream;
+    }
+
+    // For bot sentences, animate them word-by-word
+    this.animateText(stream.textDiv, text, stream.accumulatedText).then(updatedText => {
+      stream.accumulatedText = updatedText;
+    });
+    
+    this.conversationLog.scrollTop = this.conversationLog.scrollHeight;
   }
 
   addConversationMessage(text, role) {
